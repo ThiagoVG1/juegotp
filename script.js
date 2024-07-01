@@ -7,20 +7,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const wordsList = document.getElementById('words-list');
     const popup = document.getElementById('popup');
     const overlay = document.getElementById('overlay');
+    const timerElement = document.getElementById('timer');
+    const startButton = document.getElementById('start-button');
+    const intro = document.getElementById('intro');
+    const game = document.getElementById('game');
     let selectedCells = [];
     let selectedWord = '';
     let mouseIsDown = false;
+    let foundWords = 0;
+    let timer;
+    let elapsedTime = 0;
 
+    // Rellena la lista de palabras
     words.forEach(word => {
         const listItem = document.createElement('li');
         listItem.textContent = word;
+        listItem.dataset.word = word;
         wordsList.appendChild(listItem);
     });
 
+    // Inicializa la cuadrícula
     for (let i = 0; i < gridSize; i++) {
         grid[i] = new Array(gridSize).fill('');
     }
 
+    // Coloca una palabra en la cuadrícula
     const placeWord = (word) => {
         const direction = Math.floor(Math.random() * 2);
         let row, col;
@@ -60,8 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Coloca todas las palabras en la cuadrícula
     words.forEach(placeWord);
 
+    // Rellena los espacios vacíos con letras aleatorias
     for (let i = 0; i < gridSize; i++) {
         for (let j = 0; j < gridSize; j++) {
             if (grid[i][j] === '') {
@@ -70,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Crea la cuadrícula en el DOM
     for (let i = 0; i < gridSize; i++) {
         for (let j = 0; j < gridSize; j++) {
             const cell = document.createElement('div');
@@ -89,10 +103,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     selectCell(cell);
                 }
             });
+            cell.addEventListener('touchstart', (event) => {
+                event.preventDefault();
+                mouseIsDown = true;
+                selectCell(cell);
+            });
+            cell.addEventListener('touchmove', (event) => {
+                event.preventDefault();
+                const touch = event.touches[0];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (target && target.dataset.row && target.dataset.col) {
+                    selectCell(target);
+                }
+            });
+            cell.addEventListener('touchend', () => {
+                mouseIsDown = false;
+                checkWord();
+            });
             container.appendChild(cell);
         }
     }
 
+    // Selecciona una celda
     const selectCell = (cell) => {
         if (!cell.classList.contains('selected')) {
             cell.classList.add('selected');
@@ -101,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // Muestra un pop-up
     const showPopup = (text) => {
         popup.textContent = text;
         popup.style.display = 'block';
@@ -111,10 +144,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 2000);
     };
 
+    // Verifica si la palabra es correcta
     const checkWord = () => {
-        if (words.includes(selectedWord)) {
+        const wordIndex = words.indexOf(selectedWord);
+        if (wordIndex !== -1) {
             selectedCells.forEach(cell => cell.classList.add('correct'));
-            showPopup(`¡Correcto! Has encontrado la palabra: ${selectedWord}`);
+            const listItem = document.querySelector(`[data-word="${selectedWord}"]`);
+            listItem.style.textDecoration = 'line-through';
+            foundWords++;
+            if (foundWords === words.length) {
+                clearInterval(timer);
+                showPopup(`¡Felicidades! Encontraste todas las palabras en ${formatTime(elapsedTime)}.`);
+            } else {
+                showPopup(`¡Correcto! Has encontrado la palabra: ${selectedWord}`);
+            }
         } else {
             selectedCells.forEach(cell => cell.classList.remove('selected'));
         }
@@ -125,5 +168,33 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('mouseup', () => {
         mouseIsDown = false;
         checkWord();
+    });
+
+    document.addEventListener('touchend', () => {
+        mouseIsDown = false;
+        checkWord();
+    });
+
+    // Cronómetro
+    const startTimer = () => {
+        timer = setInterval(() => {
+            elapsedTime++;
+            timerElement.textContent = formatTime(elapsedTime);
+        }, 1000);
+    };
+
+    const formatTime = (seconds) => {
+        const minutes = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
+    
+    startTimer();
+
+    // Botón de inicio
+    startButton.addEventListener('click', () => {
+        intro.style.display = 'none';
+        game.style.display = 'block';
+        
     });
 });
